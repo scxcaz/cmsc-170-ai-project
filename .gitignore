@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Local configuration
+.env
+.vscode/
+
+# Large dataset files
+data/*.csv
+data/*.parquet
