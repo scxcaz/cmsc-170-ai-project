@@ -1,6 +1,7 @@
 ﻿# CMSC 170 — Final Project
 
 University of the Philippines Los Baños
+
 CMSC 170: Introduction to Artificial Intelligence
 
 ## Project Overview
