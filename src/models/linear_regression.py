@@ -106,6 +106,7 @@ def train(X, y, learning_rate=0.05, iterations=200):
 
 if __name__ == "__main__":
     from src.preprocessing import prepare_data
+    from src import evaluation
 
     # loads the shared training and testing data
     X_train, y_train, X_test, y_test = prepare_data()
@@ -131,18 +132,38 @@ if __name__ == "__main__":
     predictions_millions = predict_batch(X_test, weights, bias)
     predictions_php = millions_to_pesos(predictions_millions)
 
-    # calculates the average absolute prediction error in PHP
-    test_mae = np.mean(np.abs(y_test - predictions_php))
 
-    # compares the model against a constant training-median prediction
+    # ==================== EVALUATION ==================== #
+
+
+    # evaluates the predictions using the shared regression metrics
+    test_mae = evaluation.mean_absolute_error(y_test, predictions_php)
+    test_mse = evaluation.mean_squared_error(y_test, predictions_php)
+    test_rmse = evaluation.root_mean_squared_error(y_test, predictions_php)
+    test_r2 = evaluation.r_squared(y_test, predictions_php)
+
+    # uses the median training budget as a simple baseline prediction
     median_budget = np.median(y_train)
-    baseline_mae = np.mean(np.abs(y_test - median_budget))
+    baseline_predictions = np.full_like(y_test, median_budget)
 
-    # displays the training settings and evaluation results
+    # compares the model's MAE against the median baseline
+    baseline_mae = evaluation.mean_absolute_error(
+        y_test, baseline_predictions
+    )
+
+    # displays the training settings
     print("Training projects:", len(X_train))
     print("Testing projects:", len(X_test))
     print("Learning rate:", learning_rate)
     print("Iterations:", iterations)
     print("All predictions finite:", np.isfinite(predictions_php).all())
-    print("Linear Regression MAE (PHP):", test_mae)
-    print("Median baseline MAE (PHP):", baseline_mae)
+
+    # displays the four evaluation metrics
+    print("\nLinear Regression Results:")
+    print(f"MAE:  PHP {test_mae:,.2f}")
+    print(f"MSE:  PHP² {test_mse:,.2f}")
+    print(f"RMSE: PHP {test_rmse:,.2f}")
+    print(f"R²:   {test_r2:.4f}")
+
+    # displays the baseline result for comparison
+    print(f"\nMedian baseline MAE: PHP {baseline_mae:,.2f}")
