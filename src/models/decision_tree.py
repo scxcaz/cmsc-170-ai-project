@@ -156,16 +156,42 @@ class DecisionTreeRegressor: #predicts the average target value
 
 if __name__ == "__main__":
     from src.preprocessing import prepare_data
+    from src.evaluation import (
+        mean_absolute_error,
+        mean_squared_error,
+        root_mean_squared_error,
+        r_squared,
+    )
 
     X_train, y_train, X_test, y_test = prepare_data()
     print(f"Training projects: {len(y_train)} | Testing projects: {len(y_test)}")
     model = DecisionTreeRegressor(max_depth=16, min_samples_split=20, min_samples_leaf=10)
+   
+    # train the decision tree using the training data
     model.fit(X_train, y_train)
 
     print("\nTop of the tree:")
     model.print_tree(max_print_depth=3)
-    predicted = model.predict(X_test)
+
+    # make predictions for both the training and testing data
+    train_actual = np.asarray(y_train, dtype=np.float64)
+    train_predicted = model.predict(X_train)
     actual = np.asarray(y_test, dtype=np.float64)
+    predicted = model.predict(X_test)
+
+    # evaluate model on the testing data using the shared metrics
+    print("\nDecision Tree Results (testing set):")
+    print(f"MAE:  PHP {mean_absolute_error(actual, predicted):,.2f}")
+    print(f"MSE:  {mean_squared_error(actual, predicted):,.2f}")
+    print(f"RMSE: PHP {root_mean_squared_error(actual, predicted):,.2f}")
+    print(f"R2:   {r_squared(actual, predicted):.4f}")
+
+    # evaluate model on the training data
+    #see if the tree is overfitting
+    print("\nDecision Tree Results (training set):")
+    print(f"MAE:  PHP {mean_absolute_error(train_actual, train_predicted):,.2f}")
+    print(f"RMSE: PHP {root_mean_squared_error(train_actual, train_predicted):,.2f}")
+    print(f"R2:   {r_squared(train_actual, train_predicted):.4f}")
 
     print("\nFirst 10 testing projects:")
     print(f"{'Actual':>18} {'Predicted':>18}")
