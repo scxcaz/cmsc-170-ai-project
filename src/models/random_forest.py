@@ -1,99 +1,25 @@
 
 import numpy as np
-
-# temporarily copied decision tree
-# will import decision_tree.py after reviews
-
-# node for each tree
-class Node:
-
-    def __init__(self, prediction, size):
-        self.prediction = prediction
-        self.size = size
-        self.feature = None
-        self.cut = None
-        self.left_child = None
-        self.right_child = None
-        self.gain = 0.0
-
-    def is_leaf(self):
-        return self.feature is None
+from src.models.decision_tree import DecisionTreeRegressor
 
 
-# decision tree used by the forest
-class _DecisionTreeRegressor:
+# decision tree that randomly selects features at each split
+class RandomFeatureTree(DecisionTreeRegressor):
 
     def __init__(self, max_depth=8, min_samples_split=20,
                  min_samples_leaf=10, max_features=None,
                  random_state=42):
 
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.min_samples_leaf = min_samples_leaf
+        super().__init__(max_depth, min_samples_split, min_samples_leaf)
+
         self.max_features = max_features
         self.rng = np.random.default_rng(random_state)
-        self.root = None
-
-    def fit(self, X, y):
-
-        X = np.asarray(X, dtype=np.float64)
-        y = np.asarray(y, dtype=np.float64).ravel()
-
-        if len(X) == 0 or len(X) != len(y):
-            raise ValueError("Invalid training data.")
-
-        self.root = self.grow(X, y, 0)
-        return self
-
-    def grow(self, X, y, depth):
-
-        # use the average budget as the prediction
-        node = Node(float(y.mean()), len(y))
-
-        too_deep = depth >= self.max_depth
-        too_small = len(y) < max(
-            self.min_samples_split,
-            2 * self.min_samples_leaf
-        )
-        all_equal = y.min() == y.max()
-
-        if too_deep or too_small or all_equal:
-            return node
-
-        column, cut, gain = self.search_split(X, y)
-
-        if column is None or gain <= 0:
-            return node
-
-        goes_left = X[:, column] <= cut
-
-        node.feature = column
-        node.cut = cut
-        node.gain = gain
-
-        node.left_child = self.grow(
-            X[goes_left], y[goes_left], depth + 1
-        )
-
-        node.right_child = self.grow(
-            X[~goes_left], y[~goes_left], depth + 1
-        )
-
-        return node
 
     def search_split(self, X, y):
 
-        n = len(y)
-        centred = y - y.mean()
-        smallest = self.min_samples_leaf
-
-        best_column = None
-        best_cut = None
-        best_gain = -np.inf
-
         # select random features to check
         if self.max_features is None:
-            feature_count = X.shape[1]
+            feature_count = max(1, int(np.sqrt(X.shape[1])))
         else:
             feature_count = min(self.max_features, X.shape[1])
 
@@ -103,111 +29,12 @@ class _DecisionTreeRegressor:
             replace=False
         )
 
-        for column in columns:
+        column, cut, gain = super().search_split(X[:, columns], y)
 
-            values = X[:, column]
-            low = values.min()
-            high = values.max()
-
-            if low == high:
-                continue
-
-            # check binary features
-            if np.all((values == low) | (values == high)):
-
-                left_rows = values == low
-                n_left = int(left_rows.sum())
-                n_right = n - n_left
-
-                if n_left < smallest or n_right < smallest:
-                    continue
-
-                left_total = centred[left_rows].sum()
-
-                gain = self.variance_reduction(
-                    n, n_left, n_right, left_total
-                )
-
-                cut = (low + high) / 2
-
-            else:
-
-                # check possible split points
-                order = np.argsort(values, kind="stable")
-                ordered_values = values[order]
-
-                left_totals = np.cumsum(centred[order])[:-1]
-
-                n_left = np.arange(1, n)
-                n_right = n - n_left
-
-                usable = (
-                    (ordered_values[:-1] != ordered_values[1:])
-                    & (n_left >= smallest)
-                    & (n_right >= smallest)
-                )
-
-                if not usable.any():
-                    continue
-
-                gains = self.variance_reduction(
-                    n, n_left, n_right, left_totals
-                )
-
-                gains[~usable] = -np.inf
-
-                pos = int(gains.argmax())
-
-                gain = gains[pos]
-                cut = (
-                    ordered_values[pos] + ordered_values[pos + 1]
-                ) / 2
-
-            if gain > best_gain:
-                best_column = column
-                best_cut = cut
-                best_gain = gain
-
-        if best_column is None:
+        if column is None:
             return None, None, 0.0
 
-        return best_column, best_cut, float(best_gain)
-
-    # calculate variance reduction
-    def variance_reduction(self, n, n_left, n_right, left_total):
-
-        return (
-            left_total ** 2 / n_left
-            + left_total ** 2 / n_right
-        ) / n
-
-    def predict(self, X):
-
-        X = np.asarray(X, dtype=np.float64)
-
-        if self.root is None:
-            raise ValueError("Train the tree before predicting.")
-
-        results = np.empty(len(X))
-
-        self.route(self.root, X, np.arange(len(X)), results)
-
-        return results
-
-    # send rows to their matching leaves
-    def route(self, node, X, rows, results):
-
-        if len(rows) == 0:
-            return
-
-        if node.is_leaf():
-            results[rows] = node.prediction
-            return
-
-        goes_left = X[rows, node.feature] <= node.cut
-
-        self.route(node.left_child, X, rows[goes_left], results)
-        self.route(node.right_child, X, rows[~goes_left], results)
+        return int(columns[column]), cut, gain
 
 
 # random forest regression
@@ -273,7 +100,7 @@ class RandomForestRegressor:
             # give each tree different random seed
             tree_seed = int(self.rng.integers(0, 1000000))
 
-            tree = _DecisionTreeRegressor(
+            tree = RandomFeatureTree(
                 max_depth=self.max_depth,
                 min_samples_split=self.min_samples_split,
                 min_samples_leaf=self.min_samples_leaf,
@@ -312,6 +139,12 @@ class RandomForestRegressor:
 if __name__ == "__main__":
 
     from src.preprocessing import prepare_data
+    from src.evaluation import (
+        mean_absolute_error,
+        mean_squared_error,
+        root_mean_squared_error,
+        r_squared
+    )
 
     X_train, y_train, X_test, y_test = prepare_data()
 
@@ -322,9 +155,10 @@ if __name__ == "__main__":
 
     model = RandomForestRegressor(
         n_trees=5,
-        max_depth=16,
+        max_depth=8,
         min_samples_split=20,
         min_samples_leaf=10,
+        max_features=5,
         random_state=42
     )
 
@@ -336,17 +170,20 @@ if __name__ == "__main__":
     predicted = model.predict(X_test)
     actual = np.asarray(y_test, dtype=np.float64).ravel()
 
-    # evaluation metrics
-    mae = np.mean(np.abs(actual - predicted))
-    mse = np.mean((actual - predicted) ** 2)
-    rmse = np.sqrt(mse)
+    # evaluation metrics using shared functions
+    mae = mean_absolute_error(actual, predicted)
+    mse = mean_squared_error(actual, predicted)
+    rmse = root_mean_squared_error(actual, predicted)
+    r2 = r_squared(actual, predicted)
 
-    total_variance = np.sum((actual - actual.mean()) ** 2)
-
-    if total_variance == 0:
-        r2 = float("nan")
-    else:
-        r2 = 1 - np.sum((actual - predicted) ** 2) / total_variance
+    # display hyperparameters
+    print("\nRandom Forest Hyperparameters:")
+    print("Number of trees:", model.n_trees)
+    print("Maximum depth:", model.max_depth)
+    print("Minimum samples to split:", model.min_samples_split)
+    print("Minimum samples per leaf:", model.min_samples_leaf)
+    print("Features per split:", model.max_features)
+    print("Random state:", model.random_state)
 
     print("\nRandom Forest Results:")
     print(f"MAE:  PHP {mae:,.2f}")
