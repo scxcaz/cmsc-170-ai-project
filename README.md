@@ -132,11 +132,131 @@ All members will contribute to testing, evaluation, documentation, and the final
 | 4 — Project Page | November 16–20, 2026 | GitHub Pages project website |
 | 5 — Presentation | November 23–27, 2026 | Final group presentation |
 
+
 ## Reproducibility
 
-Instructions for dataset preparation, running the implementations, configuring model parameters, and reproducing experimental results will be documented as development progresses.
+### Requirements
 
-The Parquet-to-CSV conversion procedure is subject to confirmation with the course instructor.
+- Python 3.12
+- NumPy
+- Matplotlib
+
+Install the required libraries:
+
+```powershell
+python -m pip install numpy matplotlib
+```
+
+The regression algorithms were implemented from scratch. NumPy is used for numerical operations, while Matplotlib is used to generate graphs.
+
+### Dataset Setup
+
+The project uses the DPWH Infrastructure Transparency Dataset.
+
+The original dataset is available at:
+https://huggingface.co/datasets/bettergovph/dpwh-transparency-data
+
+The program expects the prepared CSV file at:
+
+`data/dpwh_transparency_data.csv`
+
+The CSV must contain the original fields used during preprocessing, including `category`, `infraYear`, `location`, and `budget`.
+
+The dataset is excluded from Git because of its file size. See `data/README.md` for additional dataset information.
+
+### Data Preparation
+
+All three models use the same preprocessing procedure:
+
+1. Remove projects with zero budgets or missing required values.
+2. Extract the region from each project's location information.
+3. Use project category, infrastructure year, and region as input features.
+4. Group categories outside the five most common training categories into an "Other" category.
+5. Encode categorical features and scale the infrastructure year.
+6. Split the prepared dataset into 80% training and 20% testing data using a fixed random seed.
+
+The final dataset contains 241,155 valid projects:
+
+- Training projects: 192,924
+- Testing projects: 48,231
+- Input features: 25
+
+Encoding and scaling information is determined using the training data to avoid data leakage.
+
+### Running the Models
+
+Run the following commands from the repository's root directory.
+
+Linear Regression:
+
+```powershell
+python -m src.models.linear_regression
+```
+
+Decision Tree Regression:
+
+```powershell
+python -m src.models.decision_tree
+```
+
+Random Forest Regression:
+
+```powershell
+python -m src.models.random_forest
+```
+
+To train and compare all three models in one run:
+
+```powershell
+python -m src.comparison
+```
+
+### Model Settings
+
+| Model | Settings |
+|---|---|
+| Linear Regression | Learning rate: 0.05; iterations: 200 |
+| Decision Tree | Maximum depth: 16; minimum split: 20; minimum leaf: 10 |
+| Random Forest | 5 trees; maximum depth: 8; minimum split: 20; minimum leaf: 10; 5 features per split; random state: 42 |
+
+Linear Regression trains using budgets expressed in millions of PHP, then converts predictions back to PHP before evaluation.
+
+The other two models use budgets in PHP directly.
+
+### Evaluation Results
+
+All three models were evaluated using the same 48,231 testing projects.
+
+| Metric | Linear Regression | Decision Tree | Random Forest |
+|---|---:|---:|---:|
+| MAE (PHP) | 22,711,846.66 | **21,145,852.77** | 21,951,105.32 |
+| MSE (PHP²) | 3.203e+15 | 3.283e+15 | **3.021e+15** |
+| RMSE (PHP) | 56,596,485.12 | 57,299,852.40 | **54,964,604.78** |
+| R² | 0.0725 | 0.0493 | **0.1252** |
+
+The median training-budget baseline achieved an MAE of PHP 22,067,800.77.
+
+Decision Tree produced the lowest MAE, while Random Forest achieved the lowest MSE and RMSE and the highest R².
+
+However, all three models have relatively low R² values. This suggests that the selected project characteristics explain only a limited portion of the variation in infrastructure budgets.
+
+### Generated Results
+
+Running the unified comparison creates the following files:
+
+- `results/model_comparison.csv` - Numerical evaluation results
+- `results/error_comparison.png` - MAE and RMSE comparison
+- `results/r2_comparison.png` - R² comparison
+
+#### Error Comparison
+
+![MAE and RMSE Comparison](results/error_comparison.png)
+
+#### R-squared Comparison
+
+![R-squared Comparison](results/r2_comparison.png)
+
+The graphs and CSV are also included in the repository for reference.
 
 ## References and AI Assistance
 
