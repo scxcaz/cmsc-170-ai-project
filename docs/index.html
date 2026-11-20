@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A comparison of three from-scratch regression models for Philippine infrastructure project budgets using DPWH transparency data.">
+  <title>Predicting Philippine Infrastructure Project Budgets: A Comparative Study of Three Regression Methods</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top"><strong>CMSC 170</strong><small>University of the Philippines Los Baños</small></a>
+      <nav aria-label="Project sections">
+        <a href="#dataset">Dataset</a>
+        <a href="#methods">Methods</a>
+        <a href="#experiment">Experiment</a>
+        <a href="#results">Results</a>
+        <a href="#discussion">Discussion</a>
+        <a href="#references">References</a>
+      </nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="title">
+      <div class="wrap hero-grid">
+        <div class="hero-main">
+          <p class="eyebrow">Introduction to Artificial Intelligence · Milestone 4</p>
+          <h1 id="title">Predicting Philippine<br class="desktop-break"> Infrastructure<br class="desktop-break"> Project Budgets</h1>
+          <p class="hero-copy">Comparing Linear Regression, Decision Tree, and Random Forest using DPWH infrastructure data.</p>
+          <div class="actions">
+            <a class="button primary" href="#results">Explore the results</a>
+            <a class="button secondary" href="https://github.com/scxcaz/cmsc-170-ai-project">GitHub repository</a>
+          </div>
+          <p class="byline"><a href="#team">Sean Castillo, Donna Cadayona, and Justin Lawrence Cruz</a></p>
+        </div>
+        <aside class="hero-finding" aria-labelledby="finding">
+          <p class="eyebrow">Best test-set R²</p>
+          <strong class="figure-number">0.1252</strong>
+          <div class="finding-scale" role="img" aria-label="0.1252 on a reference scale from zero to one">
+            <div class="scale-track" aria-hidden="true"><span></span></div>
+            <div class="scale-labels" aria-hidden="true"><span>0</span><span>1</span></div>
+          </div>
+          <h2 id="finding">Random Forest</h2>
+          <p>The best of the three models accounted for about 12.5% of the variation in recorded budgets on the test set.</p>
+          <a href="#discussion">What the results tell us</a>
+        </aside>
+      </div>
+    </section>
+    <div class="facts">
+      <dl class="wrap facts-grid">
+        <div><dt>Valid project records</dt><dd>241,155</dd></div>
+        <div><dt>Engineered features</dt><dd>25</dd></div>
+        <div><dt>Held-out test records</dt><dd>48,231</dd></div>
+        <div><dt>From-scratch methods</dt><dd>3</dd></div>
+      </dl>
+    </div>
+
+    <section class="wrap section prose-grid" id="problem">
+      <div><p class="eyebrow">Problem and motivation</p><h2>Estimating recorded project budgets</h2></div>
+      <div class="prose">
+        <p>Infrastructure project budgets span a wide range. Public records from the Department of Public Works and Highways (DPWH) let us test whether a few readily available project attributes provide a useful first estimate.</p>
+        <p>We frame this as supervised regression. Given a project’s category, region, and infrastructure year, the model predicts its recorded budget in Philippine pesos (PHP). Comparing three methods and a constant baseline shows how much information those attributes carry.</p>
+      </div>
+    </section>
+
+    <section class="band" id="dataset">
+      <div class="wrap section">
+        <div class="section-intro">
+          <p class="eyebrow">Dataset</p><h2>From public records to 25 inputs</h2>
+          <p>Our snapshot of the DPWH Infrastructure Transparency Dataset, distributed by BetterGov.PH, contained 248,220 records and 23 fields. The source was distributed as Parquet, and the project uses a prepared CSV.</p>
+        </div>
+        <div class="dataset-grid">
+          <div class="panel">
+            <h3>Cleaning and splitting</h3>
+            <ol class="steps">
+              <li>Read the CSV and extract the region from each project’s location field.</li>
+              <li>Keep records with a positive budget, a category, a region, and an integer infrastructure year. This leaves 241,155 records.</li>
+              <li>Shuffle and split the valid records before deriving encoding and scaling rules from the training set.</li>
+            </ol>
+            <a href="https://huggingface.co/datasets/bettergovph/dpwh-transparency-data">View the dataset source</a>
+          </div>
+          <div class="panel">
+            <h3>Model inputs</h3>
+            <dl class="features">
+              <div><dt><span>6</span> Category features</dt><dd>One-hot indicators for the five most common training categories and an “Other” group.</dd></div>
+              <div><dt><span>18</span> Region features</dt><dd>One-hot indicators for the regions observed during training.</dd></div>
+              <div><dt><span>1</span> Infrastructure year</dt><dd>Min-max scaled using the earliest and latest training years.</dd></div>
+            </dl>
+            <p class="target"><strong>Target</strong> · Recorded project budget (PHP)</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap section" id="methods">
+      <div class="section-intro">
+        <p class="eyebrow">Methods</p><h2>Three ways to estimate a budget</h2>
+        <p>The implementations use Python and NumPy and share the same inputs and evaluation metrics.</p>
+      </div>
+      <div class="method-grid">
+        <article class="panel method">
+          <h3>Linear Regression</h3>
+          <p>Predicts a weighted sum of the inputs plus a bias. The implementation starts with zero weights and bias and uses full-batch gradient descent to minimize mean squared error.</p>
+          <p>Training uses budgets in millions of pesos. Predictions are converted back to PHP before scoring.</p>
+          <a href="https://github.com/scxcaz/cmsc-170-ai-project/blob/4da823e530dd695c8bd21f1c46beb255e6f03813/src/models/linear_regression.py">View implementation</a>
+        </article>
+        <article class="panel method">
+          <h3>Decision Tree</h3>
+          <p>Recursively splits projects using the feature and threshold that reduce budget variance the most. A terminal node predicts the mean budget of its training projects.</p>
+          <p>The split search handles two-value features directly and uses sorted values and cumulative sums for other features.</p>
+          <a href="https://github.com/scxcaz/cmsc-170-ai-project/blob/4da823e530dd695c8bd21f1c46beb255e6f03813/src/models/decision_tree.py">View implementation</a>
+        </article>
+        <article class="panel method">
+          <h3>Random Forest</h3>
+          <p>Fits five trees on bootstrap samples drawn with replacement. At each split, a tree checks five randomly selected features using the same variance-reduction rule.</p>
+          <p>The final estimate averages the five tree predictions. Both tree-based methods train directly in PHP.</p>
+          <a href="https://github.com/scxcaz/cmsc-170-ai-project/blob/4da823e530dd695c8bd21f1c46beb255e6f03813/src/models/random_forest.py">View implementation</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="band" id="experiment">
+      <div class="wrap section">
+        <div class="section-intro">
+          <p class="eyebrow">Experimental setup</p><h2>One split, shared evaluation</h2>
+          <p>All models used the same holdout split (seed 67). The constant baseline predicts the median training budget for every test project.</p>
+        </div>
+        <div class="split" aria-hidden="true">
+          <div class="train">80%</div>
+          <div class="test">20%</div>
+        </div>
+        <div class="split-labels">
+          <p><strong>Training (80%)</strong> · 192,924 projects</p>
+          <p><strong>Testing (20%)</strong> · 48,231 projects</p>
+        </div>
+        <div class="setup-grid">
+          <div class="panel">
+            <h3>Run settings</h3>
+            <dl class="definitions">
+              <div><dt>Linear Regression</dt><dd>Learning rate 0.05 · 200 iterations</dd></div>
+              <div><dt>Decision Tree</dt><dd>Maximum depth 16 · minimum 20 samples to split · minimum 10 samples per leaf</dd></div>
+              <div><dt>Random Forest</dt><dd>5 trees · maximum depth 8 · minimum 20 samples to split · minimum 10 samples per leaf · 5 features per split · random state 42</dd></div>
+            </dl>
+            <p class="note">These settings reproduce the reported run. The repository documents one configuration per model for this comparison.</p>
+          </div>
+          <div class="panel">
+            <h3>Evaluation metrics</h3>
+            <dl class="definitions">
+              <div><dt>MAE (PHP)</dt><dd>Average absolute error in pesos.</dd></div>
+              <div><dt>MSE (PHP²) and RMSE (PHP)</dt><dd>Both give larger misses more weight. RMSE takes the square root of MSE to return to pesos.</dd></div>
+              <div><dt>R²</dt><dd>Compares squared prediction error with the variation around the observed test-set mean.</dd></div>
+            </dl>
+            <a href="https://github.com/scxcaz/cmsc-170-ai-project#reproducibility">Reproduce the experiment</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="results-band" id="results">
+      <div class="wrap section">
+      <div class="section-intro">
+        <p class="eyebrow">Results</p><h2>Different models lead on different metrics</h2>
+        <p>The Decision Tree achieved the lowest MAE. Random Forest achieved the lowest MSE and RMSE and the highest R².</p>
+      </div>
+        <div class="chart-grid" aria-label="Visual metric comparison">
+          <article class="chart" aria-labelledby="chart-MAE_PHP">
+            <header><h3 id="chart-MAE_PHP">MAE</h3><p>PHP millions · lower is better</p></header>
+            <ul>
+              <li class="chart-row">
+                <div class="chart-label"><span>Linear Regression</span><strong>22.71</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:90.84739%"></span></div>
+              </li>
+              <li class="chart-row leading">
+                <div class="chart-label"><span>Decision Tree<span class="lead-label">Best</span></span><strong>21.15</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:84.58341%"></span></div>
+              </li>
+              <li class="chart-row">
+                <div class="chart-label"><span>Random Forest</span><strong>21.95</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:87.80442%"></span></div>
+              </li>
+              <li class="chart-row baseline">
+                <div class="chart-label"><span>Median baseline</span><strong>22.07</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:88.27120%"></span></div>
+              </li>
+            </ul>
+            <div class="chart-scale" aria-hidden="true"><span>0</span><span>25</span></div>
+          </article>
+          <article class="chart" aria-labelledby="chart-MSE_PHP2">
+            <header><h3 id="chart-MSE_PHP2">MSE</h3><p>PHP² × 10¹⁵ · lower is better</p></header>
+            <ul>
+              <li class="chart-row">
+                <div class="chart-label"><span>Linear Regression</span><strong>3.203</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:80.07905%"></span></div>
+              </li>
+              <li class="chart-row">
+                <div class="chart-label"><span>Decision Tree</span><strong>3.283</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:82.08183%"></span></div>
+              </li>
+              <li class="chart-row leading">
+                <div class="chart-label"><span>Random Forest<span class="lead-label">Best</span></span><strong>3.021</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:75.52769%"></span></div>
+              </li>
+            </ul>
+            <div class="chart-scale" aria-hidden="true"><span>0</span><span>4</span></div>
+          </article>
+          <article class="chart" aria-labelledby="chart-RMSE_PHP">
+            <header><h3 id="chart-RMSE_PHP">RMSE</h3><p>PHP millions · lower is better</p></header>
+            <ul>
+              <li class="chart-row">
+                <div class="chart-label"><span>Linear Regression</span><strong>56.60</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:87.07152%"></span></div>
+              </li>
+              <li class="chart-row">
+                <div class="chart-label"><span>Decision Tree</span><strong>57.30</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:88.15362%"></span></div>
+              </li>
+              <li class="chart-row leading">
+                <div class="chart-label"><span>Random Forest<span class="lead-label">Best</span></span><strong>54.96</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:84.56093%"></span></div>
+              </li>
+            </ul>
+            <div class="chart-scale" aria-hidden="true"><span>0</span><span>65</span></div>
+          </article>
+          <article class="chart" aria-labelledby="chart-R2">
+            <header><h3 id="chart-R2">R²</h3><p>Unitless · higher is better</p></header>
+            <ul>
+              <li class="chart-row">
+                <div class="chart-label"><span>Linear Regression</span><strong>0.0725</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:48.35272%"></span></div>
+              </li>
+              <li class="chart-row">
+                <div class="chart-label"><span>Decision Tree</span><strong>0.0493</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:32.88871%"></span></div>
+              </li>
+              <li class="chart-row leading">
+                <div class="chart-label"><span>Random Forest<span class="lead-label">Best</span></span><strong>0.1252</strong></div>
+                <div class="bar-track" aria-hidden="true"><span style="width:83.49510%"></span></div>
+              </li>
+            </ul>
+            <div class="chart-scale" aria-hidden="true"><span>0</span><span>0.15</span></div>
+          </article>
+        </div>
+        <div class="results-table" role="region" tabindex="0" aria-label="Results table, scroll horizontally on small screens">
+          <table>
+            <caption>Test-set comparison · 48,231 projects · rounded for display · best values in bold<span class="table-hint">Scroll the table to compare all three models.</span></caption>
+            <thead><tr><th scope="col">Metric</th><th scope="col">Linear Regression</th><th scope="col">Decision Tree</th><th scope="col">Random Forest</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">MAE (PHP) ↓</th><td>22,711,846.66</td><td class="best"><strong>21,145,852.77</strong></td><td>21,951,105.32</td></tr>
+              <tr><th scope="row">MSE (PHP²) ↓</th><td>3.203e+15</td><td>3.283e+15</td><td class="best"><strong>3.021e+15</strong></td></tr>
+              <tr><th scope="row">RMSE (PHP) ↓</th><td>56,596,485.12</td><td>57,299,852.40</td><td class="best"><strong>54,964,604.78</strong></td></tr>
+              <tr><th scope="row">R² ↑</th><td>0.0725</td><td>0.0493</td><td class="best"><strong>0.1252</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="result-notes">
+          <p><strong>Median baseline MAE</strong> · PHP 22,067,800.77</p>
+          <a href="assets/model_comparison.csv" download>Download exact results (CSV)</a>
+        </div>
+        <p class="results-reading">Read across each row to answer a different question. The Decision Tree minimizes the average miss in pesos. Random Forest leads when large misses carry more weight. Both tree-based models beat the median baseline on MAE, while Linear Regression trails it.</p>
+        <section class="comparison-graphs" aria-labelledby="comparison-graphs-title">
+          <h3 id="comparison-graphs-title">Comparison Graphs</h3>
+          <div class="figure-grid">
+            <figure class="panel comparison-figure">
+              <figcaption>
+                <h4>Regression Model Error Comparison</h4>
+                <p class="figure-caption">Test-set MAE and RMSE in millions of PHP.</p>
+                <p>Decision Tree has the lowest average absolute error (MAE). Random Forest has the lowest RMSE and also leads on MSE in the table above. Both squared-error metrics give more weight to large misses.</p>
+              </figcaption>
+              <a href="assets/error_comparison.png" aria-label="Open full-size MAE and RMSE figure"><img src="assets/error_comparison.png" width="1500" height="900" alt="Grouped bars for all three models. Decision Tree has the shortest MAE bar and Random Forest has the shortest RMSE bar."></a>
+            </figure>
+            <figure class="panel comparison-figure">
+              <figcaption>
+                <h4>Regression Model R-squared Comparison</h4>
+                <p class="figure-caption">Test-set R² for all three models (unitless).</p>
+                <p>Random Forest leads with an R² of 0.1252. Even the highest score accounts for only about 12.5% of the test-set variation in recorded budgets.</p>
+              </figcaption>
+              <a href="assets/r2_comparison.png" aria-label="Open full-size R-squared figure"><img src="assets/r2_comparison.png" width="1350" height="900" alt="Test R-squared of 0.0725 for Linear Regression, 0.0493 for Decision Tree, and 0.1252 for Random Forest."></a>
+            </figure>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="band discussion" id="discussion">
+      <div class="wrap section prose-grid">
+        <div><p class="eyebrow">Discussion</p><h2>How much do the features explain?</h2></div>
+        <div class="prose">
+          <h3>Why the rankings differ</h3>
+          <p>MAE gives each peso of error equal weight. By that measure, the Decision Tree is the strongest model, and the median baseline provides a simple benchmark. The single tree had the smallest average absolute miss but the highest MSE and RMSE. Squaring magnifies larger misses, so the rankings are consistent with the forest’s averaging reducing the impact of some large errors. The aggregate results cannot identify which kinds of projects produced those misses.</p>
+          <p>MSE, RMSE, and R² give the same ranking here because every model used the same test set. RMSE is the square root of MSE, and R² uses the same squared errors relative to the variation around the observed test-set mean. The median baseline is a separate MAE benchmark.</p>
+          <h3>Limits of this comparison</h3>
+          <p>Linear Regression combines additive effects, while the trees can represent interactions between inputs. Even so, the highest R² was about 0.125. Projects with the same category, region, and year can differ substantially in scope. A random holdout measures performance on this historical sample. Performance on future years or unfamiliar regions remains untested.</p>
+          <h3>Future improvements</h3>
+          <p>Evaluate project descriptions, finer-grained location, funding source, and contractor information in future work. Check whether each field is available at the intended prediction time, especially contractor identity. Compare against the current features on a common split, and consider a later-year holdout to test performance over time.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="conclusion" id="conclusion">
+      <div class="wrap section prose-grid">
+        <div><p class="eyebrow">Conclusion</p><h2>Project attributes give a rough estimate</h2></div>
+        <p>Choose the Decision Tree if average absolute error is the comparison priority. Random Forest performed best when larger misses mattered more. With a best RMSE of about PHP 55 million and a best R² of 0.1252, these models are best treated as research baselines for further study.</p>
+      </div>
+    </section>
+
+    <section class="wrap section" id="references">
+      <div class="section-intro"><p class="eyebrow">Project credits</p><h2>References and disclosures</h2></div>
+      <div class="reference-grid">
+        <div class="panel">
+          <h3>Sources and project links</h3>
+          <ul class="links">
+            <li><a href="https://huggingface.co/datasets/bettergovph/dpwh-transparency-data">BetterGov.PH · DPWH Infrastructure Transparency Dataset</a></li>
+            <li><a href="https://github.com/scxcaz/cmsc-170-ai-project">Official GitHub repository</a></li>
+            <li><a href="https://github.com/scxcaz/cmsc-170-ai-project/blob/4da823e530dd695c8bd21f1c46beb255e6f03813/docs/PREPROCESSING.md">Shared preprocessing documentation</a></li>
+            <li>UP Los Baños · CMSC 170 AI Project Guidelines (course handout)</li>
+            <li>This project page serves as the presentation material.</li>
+          </ul>
+        </div>
+        <div class="panel" id="team">
+          <h3>Group members</h3>
+          <ul class="links">
+            <li><a href="https://github.com/scxcaz/cmsc-170-ai-project/commit/644dd561">Sean Castillo</a> · preprocessing, Linear Regression, shared evaluation, and integration</li>
+            <li><a href="https://github.com/scxcaz/cmsc-170-ai-project/commit/d80eda39">Donna Cadayona</a> · Decision Tree Regression</li>
+            <li><a href="https://github.com/scxcaz/cmsc-170-ai-project/commit/b462cb14">Justin Lawrence Cruz</a> · Random Forest Regression</li>
+          </ul>
+        </div>
+      </div>
+      <div class="disclosure">
+        <h3>AI and code assistance</h3>
+        <p>The project README documents use of ChatGPT for initial dataset exploration, project planning, repository organization, and documentation. ChatGPT Work also drafted the website copy and generated its HTML and CSS using the repository’s documentation, source code, and stored results. The group is confirming any additional AI or external code assistance for this disclosure.</p>
+      </div>
+    </section>
+  </main>
+  <footer><div class="wrap footer-inner"><span>CMSC 170 · University of the Philippines Los Baños</span><a href="#top">Back to top</a></div></footer>
+</body>
+</html>
