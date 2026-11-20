@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predicting DPWH Project Budgets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6fa;--fg:#0f172a;--mut:#64748b;--card:#fff;--line:#e2e8f0;--lr:#2563eb;--dt:#f97316;--rf:#10b981;--r:16px;--shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.05)}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1020;--fg:#e8edf7;--mut:#94a3b8;--card:#131a2e;--line:#243049;--shadow:none}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:0 20px 64px}
+nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav div{max-width:1000px;margin:auto;padding:12px 20px;display:flex;gap:6px;overflow-x:auto}
+nav a{color:var(--mut);text-decoration:none;font-size:.88rem;font-weight:500;padding:6px 12px;border-radius:99px;white-space:nowrap}
+nav a:hover{background:var(--card);color:var(--fg)}
+.hero{padding:48px 0 0}
+.hero p.sub{color:var(--mut);margin:0 0 10px;font-weight:500}
+h1{font-size:clamp(1.5rem,5.6vw,3.2rem);line-height:1.1;letter-spacing:-.03em;font-weight:800;margin:0 0 14px;white-space:nowrap}
+.lead{font-size:1.1rem;color:var(--mut);max-width:none;margin:0 0 22px}
+h2{font-size:1.6rem;letter-spacing:-.02em;font-weight:700;margin:48px 0 6px}
+h2+p.sub{color:var(--mut);margin:0 0 20px}
+h3{font-size:1rem;margin:0 0 8px;font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card,figure,.tbl{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.card{padding:18px 20px;border-top:4px solid var(--c,var(--line))}
+.lr{--c:var(--lr)}.dt{--c:var(--dt)}.rf{--c:var(--rf)}
+.win .k{color:var(--mut);font-size:.85rem;font-weight:500}
+.win .v{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.win .m{font-size:.9rem;font-weight:600;color:var(--c)}
+.card p{margin:4px 0 0;color:var(--mut);font-size:.92rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chips span{font-size:.78rem;background:var(--bg);border:1px solid var(--line);padding:2px 9px;border-radius:99px;color:var(--mut)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+.stats div{padding:4px 0}.stats b{display:block;font-size:1.5rem;font-weight:800;letter-spacing:-.02em}.stats span{color:var(--mut);font-size:.85rem}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{padding:12px 16px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--mut);font-size:.82rem}tr:last-child td{border-bottom:0}
+td.b{font-weight:700;color:var(--rf);background:color-mix(in srgb,var(--rf) 10%,transparent)}
+tr.base td{color:var(--mut)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;background:var(--c)}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+figure{margin:0;padding:14px}figure img{width:100%;height:auto;display:block;border-radius:8px}
+figcaption{font-size:.86rem;color:var(--mut);margin-top:10px}
+.note{margin-top:16px;padding:14px 18px;border-radius:var(--r);background:color-mix(in srgb,var(--dt) 10%,var(--card));border:1px solid color-mix(in srgb,var(--dt) 30%,var(--line));font-size:.92rem}
+pre{margin:0 0 14px;padding:16px 18px;background:#0f172a;color:#e2e8f0;border-radius:var(--r);overflow-x:auto;font:.84rem/1.6 ui-monospace,Consolas,monospace}
+a{color:var(--lr)}@media(prefers-color-scheme:dark){a{color:#7aa2ff}}
+footer{margin-top:56px;color:var(--mut);font-size:.85rem;border-top:1px solid var(--line);padding-top:18px}
+</style>
+</head>
+<body>
+<nav><div><a href="#data">Data</a><a href="#methods">Methods</a><a href="#results">Results</a><a href="#metrics">Metrics</a><a href="#analysis">Analysis</a><a href="#discussion">Discussion</a><a href="#code">Code</a><a href="#team">Team</a></div></nav>
+<main>
+
+<section class="hero" id="overview">
+<p class="sub">CMSC 170: Introduction to Artificial Intelligence · UPLB</p>
+<h1>Predicting DPWH Project Budgets</h1>
+<p class="lead">Three regression models built from scratch, compared on 48,231 test projects. The best model depends on the metric.</p>
+<div class="cards">
+<div class="card win dt"><div class="k">Best typical error (MAE)</div><div class="v">₱21.1M</div><div class="m">Decision Tree</div></div>
+<div class="card win rf"><div class="k">Best large-error control (RMSE)</div><div class="v">₱55.0M</div><div class="m">Random Forest</div></div>
+<div class="card win rf"><div class="k">Best fit (R²)</div><div class="v">0.125</div><div class="m">Random Forest</div></div>
+</div>
+</section>
+
+<section id="data">
+<h2>Data</h2>
+<p class="sub"><a href="https://huggingface.co/datasets/bettergovph/dpwh-transparency-data">DPWH Transparency Data</a> from BetterGov.ph</p>
+<div class="stats card">
+<div><b>241,155</b><span>valid projects</span></div>
+<div><b>80 / 20</b><span>train / test split</span></div>
+<div><b>25</b><span>encoded features</span></div>
+<div><b>₱9.7M</b><span>median budget</span></div>
+<div><b>₱13.2B</b><span>largest budget</span></div>
+</div>
+<div class="g2">
+<div class="card"><h3>Preparation</h3><p>Features: category, year, region. Top 5 categories kept, the rest grouped as "Other". One-hot encoding, year min-max scaled. Everything fitted on training data only.</p></div>
+<figure><img src="assets/budget_distribution.png" alt="Histogram of log10 budgets"><figcaption>Budgets are heavily right-skewed. A few huge projects dominate squared-error metrics.</figcaption></figure>
+</div>
+</section>
+
+<section id="methods">
+<h2>Methods</h2>
+<p class="sub">All implemented with Python and NumPy only</p>
+<div class="cards">
+<div class="card lr"><h3>Linear Regression</h3><p>Gradient descent on squared error.</p><div class="chips"><span>lr 0.05</span><span>200 iterations</span></div></div>
+<div class="card dt"><h3>Decision Tree</h3><p>Splits by variance reduction.</p><div class="chips"><span>depth 16</span><span>min split 20</span><span>min leaf 10</span></div></div>
+<div class="card rf"><h3>Random Forest</h3><p>Averages randomized trees.</p><div class="chips"><span>5 trees</span><span>depth 8</span><span>5 features/split</span><span>seed 42</span></div></div>
+</div>
+</section>
+
+<section id="results">
+<h2>Results</h2>
+<p class="sub">Test set, best per metric highlighted</p>
+<div class="tbl"><table>
+<thead><tr><th>Model</th><th>MAE (₱)</th><th>RMSE (₱)</th><th>MSE (₱²)</th><th>R²</th></tr></thead>
+<tbody>
+<tr class="lr"><td><i class="dot"></i>Linear Regression</td><td>22,711,847</td><td>56,596,485</td><td>3.203e15</td><td>0.0725</td></tr>
+<tr class="dt"><td><i class="dot"></i>Decision Tree</td><td class="b">21,145,853</td><td>57,299,852</td><td>3.283e15</td><td>0.0493</td></tr>
+<tr class="rf"><td><i class="dot"></i>Random Forest</td><td>21,951,105</td><td class="b">54,964,605</td><td class="b">3.021e15</td><td class="b">0.1252</td></tr>
+<tr class="base"><td>Median baseline</td><td>22,067,801</td><td>61,015,337</td><td>n/a</td><td>-0.0780</td></tr>
+<tr class="base"><td>Mean baseline</td><td>26,705,899</td><td>58,768,938</td><td>n/a</td><td>0.0000</td></tr>
+</tbody></table></div>
+<div class="g2">
+<figure><img src="assets/error_comparison.png" alt="MAE and RMSE bars"><figcaption>MAE and RMSE per model</figcaption></figure>
+<figure><img src="assets/r2_comparison.png" alt="R squared bars"><figcaption>R² per model, 0 = predicting the mean</figcaption></figure>
+</div>
+</section>
+
+<section id="metrics">
+<h2>Why the metrics disagree</h2>
+<p class="sub">Each metric punishes mistakes differently</p>
+<div class="cards">
+<div class="card dt"><h3>MAE</h3><p>Every peso of error counts equally, so it reflects the typical project. Decision Tree wins.</p></div>
+<div class="card rf"><h3>RMSE and MSE</h3><p>Squaring makes big misses dominate. Random Forest wins by averaging out extreme guesses.</p></div>
+<div class="card rf"><h3>R²</h3><p>Share of variance explained versus predicting the mean. Random Forest explains 12.5%.</p></div>
+</div>
+<div class="tbl" style="margin-top:14px"><table>
+<thead><tr><th>Typical-case view</th><th>Median abs. error (₱)</th><th>Within ₱10M</th></tr></thead>
+<tbody>
+<tr class="lr"><td><i class="dot"></i>Linear Regression</td><td>15,414,029</td><td>35.7%</td></tr>
+<tr class="dt"><td><i class="dot"></i>Decision Tree</td><td class="b">12,319,377</td><td class="b">44.1%</td></tr>
+<tr class="rf"><td><i class="dot"></i>Random Forest</td><td>13,597,903</td><td>42.9%</td></tr>
+</tbody></table></div>
+<figure style="margin-top:14px"><img src="assets/abs_error_boxplot.png" alt="Absolute error boxplot"><figcaption>Absolute error spread, outliers hidden. The Decision Tree is more accurate on typical projects.</figcaption></figure>
+</section>
+
+<section id="analysis">
+<h2>Extra analysis</h2>
+<figure style="margin-top:20px"><img src="assets/predicted_vs_actual.png" alt="Predicted vs actual"><figcaption>Predicted vs. actual, log axes. All models stay in a narrow band: they cannot tell cheap projects from very expensive ones.</figcaption></figure>
+<div class="g2">
+<figure><img src="assets/depth_sweep.png" alt="Depth sweep"><figcaption>Tree depth: train and test errors stay close, so the limit is the features, not overfitting.</figcaption></figure>
+<figure><img src="assets/forest_sweep.png" alt="Forest size sweep"><figcaption>Forest size: gains flatten after about 10 trees (R² 0.149).</figcaption></figure>
+</div>
+</section>
+
+<section id="discussion">
+<h2>Discussion</h2>
+<div class="cards" style="margin-top:20px">
+<div class="card rf"><h3>Random Forest</h3><p>Best when large errors matter.</p></div>
+<div class="card dt"><h3>Decision Tree</h3><p>Best for typical-project accuracy.</p></div>
+<div class="card lr"><h3>Linear Regression</h3><p>Weakest on typical error; budgets are not linear in one-hot features.</p></div>
+</div>
+<div class="note"><b>Low R² overall.</b> Category, year and region say little about cost. Project size, scope and description are likely stronger signals. Limits: three features, skewed target not log-transformed, no cross-validation.</div>
+</section>
+
+<section id="code">
+<h2>Code</h2>
+<p class="sub">Run from the project root with the dataset in <code>data/</code></p>
+<pre>python -m pip install numpy matplotlib
+python -m src.comparison        # 3 models, tables, graphs
+python -m src.extra_analysis    # baselines and extra graphs</pre>
+<div class="tbl"><table>
+<thead><tr><th>File</th><th style="text-align:left">Purpose</th></tr></thead>
+<tbody>
+<tr><td>src/preprocessing.py</td><td style="text-align:left">Cleaning, encoding, split</td></tr>
+<tr><td>src/models/</td><td style="text-align:left">Linear, tree and forest models</td></tr>
+<tr><td>src/evaluation.py</td><td style="text-align:left">MAE, MSE, RMSE, R²</td></tr>
+<tr><td>src/comparison.py</td><td style="text-align:left">Runs and compares all models</td></tr>
+<tr><td>src/extra_analysis.py</td><td style="text-align:left">Baselines and extra graphs</td></tr>
+</tbody></table></div>
+<p><a href="assets/model_comparison.csv">Download results CSV</a></p>
+</section>
+
+<section id="team">
+<h2>Team</h2>
+<div class="cards" style="margin-top:20px">
+<div class="card lr"><h3>Sean Carlo Castillo</h3><p>Repository, data preparation, Linear Regression, integration</p></div>
+<div class="card dt"><h3>Donna Cadayona</h3><p>Decision Tree Regression</p></div>
+<div class="card rf"><h3>Justin Lawrence Cruz</h3><p>Random Forest Regression</p></div>
+</div>
+</section>
+
+<footer>CMSC 170 · Data: DPWH Transparency Data via BetterGov.ph</footer>
+</main>
+</body>
+</html>
