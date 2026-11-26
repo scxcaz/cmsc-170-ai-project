@@ -1,6 +1,9 @@
 import random
 from collections import Counter
 from src.data_loader import load_projects
+from src.description_features import encode_description
+from src.location_features import normalize_location, encode_location
+from src.funding_features import normalize_funding, encode_funding
 
 
 # groups less common categories under "Other" to simplify feature encoding
@@ -91,10 +94,21 @@ def split_projects(projects):
 
 
 # prepares the same training and testing data for all three algorithms
-def prepare_data():
+def prepare_data(include_description=False, use_validation=False, include_location=False, 
+                 include_funding=False, validation_seed=68):
     projects = load_projects()
     training_projects, testing_projects = split_projects(projects)
+    
+    # uses part of the training data for feature experiments
+    if use_validation:
+        shuffled_training = training_projects.copy()
+        random.Random(validation_seed).shuffle(shuffled_training)
 
+        split_index = int(len(shuffled_training) * 0.8)
+
+        training_projects = shuffled_training[:split_index]
+        testing_projects = shuffled_training[split_index:]
+    
     # selects the five most common categories using training data only
     category_counts = Counter(project["category"] for project in training_projects)
     common_categories = []
@@ -125,6 +139,64 @@ def prepare_data():
     X_train, y_train = prepare_features(training_projects, common_categories, region_names, min_year, max_year)
     X_test, y_test = prepare_features(testing_projects, common_categories, region_names, min_year, max_year)
 
+    # adds description features only when requested
+    if include_description:
+        for i, project in enumerate(training_projects):
+            X_train[i].extend(encode_description(project["description"]))
+
+        for i, project in enumerate(testing_projects):
+            X_test[i].extend(encode_description(project["description"]))
+
+    # adds detailed location features only when requested
+    if include_location:
+        location_counts = Counter()
+
+        # counts normalized locations using training data only
+        for project in training_projects:
+            label = normalize_location(project["location"])
+            location_counts[label] += 1
+
+        # selects the 100 most common locations
+        common_locations = []
+
+        for label, count in location_counts.most_common(100):
+            common_locations.append(label)
+
+        # adds location features to training data
+        for i, project in enumerate(training_projects):
+            label = normalize_location(project["location"])
+            X_train[i].extend(encode_location(label, common_locations))
+
+        # adds location features to validation or testing data
+        for i, project in enumerate(testing_projects):
+            label = normalize_location(project["location"])
+            X_test[i].extend(encode_location(label, common_locations))
+    
+    # adds funding features only when requested
+    if include_funding:
+        funding_counts = Counter()
+
+        # counts normalized funding labels from training data only
+        for project in training_projects:
+            label = normalize_funding(project["funding"])
+            funding_counts[label] += 1
+
+        # selects the 15 most common funding programs
+        common_funding = []
+
+        for label, count in funding_counts.most_common(15):
+            common_funding.append(label)
+
+        # encodes funding programs for training projects
+        for i, project in enumerate(training_projects):
+            label = normalize_funding(project["funding"])
+            X_train[i].extend(encode_funding(label, common_funding))
+
+        # applies the same encoding to validation or testing projects
+        for i, project in enumerate(testing_projects):
+            label = normalize_funding(project["funding"])
+            X_test[i].extend(encode_funding(label, common_funding))
+    
     return X_train, y_train, X_test, y_test
 
 
