@@ -68,6 +68,9 @@ def load_projects():
                     "category": category,
                     "year": year,
                     "region": region,
+                    "location": location,
+                    "description": (row.get("description") or "").strip(),
+                    "funding": (row.get("sourceOfFunds") or "").strip(),
                     "budget": float(row["budget"])
                 })
 

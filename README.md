@@ -7,9 +7,7 @@ CMSC 170: Introduction to Artificial Intelligence
 
 ## Project Overview
 
-This project aims to implement and compare three machine learning regression methods from scratch using the DPWH Infrastructure Transparency Dataset.
-
-The proposed task is to predict infrastructure project budgets based on available project characteristics.
+This project implements and compares three regression methods from scratch using the DPWH Infrastructure Transparency Dataset. The models estimate recorded infrastructure project budgets from project characteristics.
 
 ## Dataset
 
@@ -20,53 +18,59 @@ The proposed task is to predict infrastructure project budgets based on availabl
 - **Original Format:** Parquet
 - **Working Format:** CSV (converted from Parquet)
 
-### Proposed Features
+### Final features
 
-- Project category
-- Infrastructure year
-- Region
-
-**Target variable:** Project budget (PHP)
-
-Feature selection and preprocessing procedures will be finalized during development.
+The selected comparison uses 152 features: category (6), region (18), infrastructure year (1), project description (10), detailed DPWH administrative location (101), and source of funds (16). The target is the recorded project budget in PHP. See [shared preprocessing](docs/PREPROCESSING.md) for the feature definitions and split protocol.
 
 ## Methods
 
-The following regression methods will be implemented and compared:
+The group implemented and evaluated three regression methods:
 
 1. **Linear Regression** — Predicts budgets using learned numerical relationships between project characteristics.
 2. **Decision Tree Regression** — Predicts budgets using learned decision rules.
 3. **Random Forest Regression** — Combines predictions from multiple decision trees.
 
-All methods will use a common dataset preparation and evaluation setup to ensure a fair comparison.
+All three methods use the same preprocessing, held-out test projects, and evaluation metrics.
 
 ## Project Structure
 
-The following is our **target project structure**. Some files and directories have not been created yet and will be added as development progresses.
+The repository contains the model implementations, validation script, saved results, and project page.
 
 ```text
 cmsc-170-ai-project/
 ├── data/
-│   ├── README.md
-│   └── DATA_PLAN.md
-│
+│   ├── DATA_PLAN.md
+│   └── README.md
+├── docs/
+│   ├── assets/
+│   │   ├── error_comparison.png
+│   │   ├── model_comparison.csv
+│   │   ├── r2_comparison.png
+│   │   └── site.css
+│   ├── index.html
+│   └── PREPROCESSING.md
+├── experiments/
+│   └── description_validation.py
+├── results/
+│   ├── error_comparison.png
+│   ├── model_comparison.csv
+│   └── r2_comparison.png
 ├── src/
 │   ├── models/
-│   │   ├── linear_regression.py
 │   │   ├── decision_tree.py
+│   │   ├── linear_regression.py
 │   │   └── random_forest.py
-│   │
+│   ├── comparison.py
 │   ├── data_loader.py
-│   ├── preprocessing.py
-│   └── evaluation.py
-│
-├── results/
-│
-├── docs/
-│   └── index.html
-│
-├── README.md
+│   ├── description_features.py
+│   ├── evaluation.py
+│   ├── funding_features.py
+│   ├── location_features.py
+│   └── preprocessing.py
+├── tests/
+│   └── test_evaluation.py
 ├── CONTRIBUTIONS.md
+├── README.md
 └── .gitignore
 ```
 
@@ -78,27 +82,26 @@ cmsc-170-ai-project/
 | `src/models/` | From-scratch implementations of the three regression methods |
 | `src/data_loader.py` | Loading and reading dataset records |
 | `src/preprocessing.py` | Data cleaning, feature encoding, and dataset splitting |
-| `src/evaluation.py` | Evaluation metrics and model comparison |
+| `src/evaluation.py` | Shared regression metrics |
+| `src/comparison.py` | Final held-out comparison and graph generation |
+| `experiments/` | Feature validation script |
+| `tests/` | Shared evaluation tests |
 | `results/` | Experimental results, comparison tables, and visualizations |
 | `docs/` | GitHub Pages project website |
 | `CONTRIBUTIONS.md` | Group responsibilities and contribution log |
 | `.gitignore` | Excludes local datasets and unnecessary files from Git tracking |
 
-**Note:** Dataset files are excluded from Git tracking. The original dataset can be obtained from the source linked above. Empty directories may not appear on GitHub until files are added.
+**Note:** Dataset files are excluded from Git tracking. The original dataset can be obtained from the source linked above.
 
-## Implementation Guidelines
+## Implementation
 
-All machine learning methods will be implemented from scratch by the group.
-
-Permitted tools include:
+The group implemented all three methods from scratch. The project uses:
 
 - Python standard library
 - NumPy (arrays and basic linear algebra only)
 - Matplotlib (plots and visualizations)
 
-Libraries that provide prebuilt machine learning algorithms, such as scikit-learn, TensorFlow, and PyTorch, will not be used.
-
-All group members are responsible for understanding their implementations and contributing to the project's development.
+The implementations use no prebuilt machine learning algorithms.
 
 ## Development Workflow
 
@@ -110,17 +113,15 @@ The project follows a collaborative Git workflow:
 4. All implementations follow the agreed data format and experimental setup.
 5. Contributions and milestone progress are documented throughout development.
 
-### Initial Responsibilities
+### Group Responsibilities
 
 | Member | Primary Responsibility |
 |---|---|
-| Group Leader | Repository management, data preparation, Linear Regression, and integration |
-| Member 2 | Decision Tree Regression |
-| Member 3 | Random Forest Regression |
+| Sean Castillo | Repository management, data preparation, Linear Regression, shared evaluation, model comparison, integration, and documentation |
+| Donna Cadayona | Decision Tree Regression implementation and evaluation |
+| Justin Lawrence Cruz | Random Forest Regression implementation and evaluation |
 
-Assignments may be adjusted based on group discussion and development requirements.
-
-All members will contribute to testing, evaluation, documentation, and the final presentation.
+See [the contribution log](CONTRIBUTIONS.md) for details.
 
 ## Project Milestones
 
@@ -166,22 +167,7 @@ The dataset is excluded from Git because of its file size. See `data/README.md` 
 
 ### Data Preparation
 
-All three models use the same preprocessing procedure:
-
-1. Remove projects with zero budgets or missing required values.
-2. Extract the region from each project's location information.
-3. Use project category, infrastructure year, and region as input features.
-4. Group categories outside the five most common training categories into an "Other" category.
-5. Encode categorical features and scale the infrastructure year.
-6. Split the prepared dataset into 80% training and 20% testing data using a fixed random seed.
-
-The final dataset contains 241,155 valid projects:
-
-- Training projects: 192,924
-- Testing projects: 48,231
-- Input features: 25
-
-Encoding and scaling information is determined using the training data to avoid data leakage.
+The original seed-67 split of 241,155 valid records reserves 48,231 projects for final testing and uses 192,924 projects for training. Feature and setting selection used overlapping validation splits (seeds 68, 69, and 70) within the training partition. The final comparison uses all 152 features and learns feature vocabularies and year scaling from training data only.
 
 ### Running the Models
 
@@ -205,7 +191,7 @@ Random Forest Regression:
 python -m src.models.random_forest
 ```
 
-To train and compare all three models in one run:
+The individual scripts are model entry points. To reproduce the reported 152-feature final test comparison, use the unified script:
 
 ```powershell
 python -m src.comparison
@@ -217,7 +203,7 @@ python -m src.comparison
 |---|---|
 | Linear Regression | Learning rate: 0.05; iterations: 200 |
 | Decision Tree | Maximum depth: 16; minimum split: 20; minimum leaf: 10 |
-| Random Forest | 5 trees; maximum depth: 8; minimum split: 20; minimum leaf: 10; 5 features per split; random state: 42 |
+| Random Forest | 5 trees; maximum depth: 8; minimum split: 20; minimum leaf: 10; 30 features per split; random state: 42 |
 
 Linear Regression trains using budgets expressed in millions of PHP, then converts predictions back to PHP before evaluation.
 
@@ -225,20 +211,18 @@ The other two models use budgets in PHP directly.
 
 ### Evaluation Results
 
-All three models were evaluated using the same 48,231 testing projects.
+Final held-out test results for the 152-feature models (48,231 projects).
 
 | Metric | Linear Regression | Decision Tree | Random Forest |
 |---|---:|---:|---:|
-| MAE (PHP) | 22,711,846.66 | **21,145,852.77** | 21,951,105.32 |
-| MSE (PHP²) | 3.203e+15 | 3.283e+15 | **3.021e+15** |
-| RMSE (PHP) | 56,596,485.12 | 57,299,852.40 | **54,964,604.78** |
-| R² | 0.0725 | 0.0493 | **0.1252** |
+| MAE (PHP) | 20,702,355.55 | **17,803,034.18** | 20,538,195.97 |
+| MSE (PHP²) | 3.016e+15 | 4.051e+15 | **2.794e+15** |
+| RMSE (PHP) | 54,917,036.83 | 63,648,095.77 | **52,858,649.20** |
+| R² | 0.1268 | −0.1730 | **0.1910** |
 
-The median training-budget baseline achieved an MAE of PHP 22,067,800.77.
+Decision Tree had the lowest MAE, and all three beat the median training-budget baseline (MAE of PHP 22,067,800.77). Random Forest had the lowest MSE and RMSE and highest R². Decision Tree’s negative R² means its squared error exceeds that of predicting the mean observed test budget for every project. The three squared-error metrics share the same ordering on this test set.
 
-Decision Tree produced the lowest MAE, while Random Forest achieved the lowest MSE and RMSE and the highest R².
-
-However, all three models have relatively low R² values. This suggests that the selected project characteristics explain only a limited portion of the variation in infrastructure budgets.
+The [original 25-feature test results](https://github.com/scxcaz/cmsc-170-ai-project/blob/cb46e96f1bee65f5282d6f868e8a2ac11b20d5c1/docs/assets/model_comparison.csv) are a historical comparison. MAE decreased for all three methods in the expanded run. The Random Forest comparison also changes the number of features considered per split from 5 to 30. Funding-program information may be unavailable before budget approval, and future-year performance remains untested.
 
 ### Generated Results
 
@@ -263,6 +247,6 @@ The graphs and CSV are also included in the repository for reference.
 - DPWH Infrastructure Transparency Dataset — https://data.bettergov.ph/
 - CMSC 170 Final Project Guidelines
 
-ChatGPT has been used to assist with initial dataset exploration, project planning, repository organization, and documentation.
+The group implemented the three regression methods from scratch. ChatGPT assisted with initial dataset exploration, project planning, repository organization, documentation, evaluation discussion, and website development. ChatGPT Work helped draft the website copy, generate the HTML and CSS, and update the page using the stored final results.
 
-All machine learning implementations will be written and reviewed by the group. Additional AI assistance, if any, will be documented in the final project page.
+The group’s supporting prompt documentation is available in [AI Usage Disclosure and Prompt Records](https://docs.google.com/document/d/1mZF4_Pj_dsfeNza186Eob0WPHhGsLEBm-YjzjQdoA2s/edit?tab=t.0), with a tab for each member. Access requires signing in with a University of the Philippines (UP) email account.
