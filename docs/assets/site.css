@@ -56,7 +56,7 @@ nav a { padding: .45rem .65rem; font-size: .9rem; text-decoration: none; font-we
 .hero-finding { background: #1b3d31; border: 1px solid #4c685b; border-top: 3px solid var(--gold); padding: clamp(1.4rem, 3vw, 2.5rem); }
 .figure-number { display: block; font: 500 clamp(3.45rem, 6.5vw, 6.6rem)/1 var(--serif); letter-spacing: -.06em; color: var(--gold); margin: .4rem 0 .8rem; font-variant-numeric: lining-nums tabular-nums; }
 .scale-track { height: 8px; background: #4c685b; }
-.scale-track span { display: block; height: 100%; width: 12.52%; background: var(--gold); }
+.scale-track span { display: block; height: 100%; width: 19.10%; background: var(--gold); }
 .scale-labels { display: flex; justify-content: space-between; margin-top: .24rem; color: #d3e1d5; font-size: .82rem; }
 .hero-finding h2 { margin-top: 1.45rem; font: 700 1.18rem/1.2 var(--sans); letter-spacing: 0; }
 .hero-finding > p:not(.eyebrow) { color: #d8e4d9; margin: .6rem 0 1rem; }
@@ -181,4 +181,15 @@ footer { border-top: 1px solid var(--line); background: #e6eee4; color: var(--mu
   .figure-number, .scale-labels { color: var(--green); }
   .section, .hero-grid { padding-block: 1.4rem; }
   .chart, .panel, .results-table, .hero-finding { break-inside: avoid; }
+}
+
+.validation-note, .historical-table { margin-top: 1rem; }
+.signed-track { position: relative; }
+.signed-track span { position: absolute; top: 0; }
+.signed-track::after {
+  position: absolute;
+  inset: -2px auto -2px 50%;
+  width: 1px;
+  background: var(--muted);
+  content: "";
 }

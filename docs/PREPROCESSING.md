@@ -10,23 +10,24 @@ for the three regression algorithms.
 - Testing data: 48,231 projects (20%)
 - Random seed: 67
 
-The same training and testing split is used by all three algorithms.
+The same original training and testing split is used by all three algorithms. Feature and setting selection uses separate validation splits (seeds 68, 69, and 70) drawn only from the original training partition. The final evaluation uses the reserved 48,231 projects.
 
 ## Input Features
 
-Each project has 25 numerical features:
+The final comparison uses 152 numerical features per project.
 
-- 6 category features: 5 most common categories + Other
-- 18 region features: one-hot encoded regions
-- 1 infrastructure year feature: scaled using the training year range
+| Group | Features | Encoding |
+| --- | ---: | --- |
+| Project category | 6 | Five most common categories plus Other |
+| Region | 18 | One-hot encoding of training regions |
+| Infrastructure year | 1 | Min-max scaling using the training year range |
+| Project description | 10 | Binary indicators from a fixed list of construction activities and infrastructure terms |
+| Detailed location | 101 | Top 100 normalized DPWH administrative labels plus Other |
+| Source of funds | 16 | Top 15 normalized funding programs plus Other |
 
-Categories and regions are encoded without assigning them a
-numerical order.
+Feature vocabularies and scaling parameters are derived from training records. Location labels are administrative descriptors, including labels beyond literal province names. Embedded years are removed from funding labels because infrastructure year is already represented. Availability of funding-program identity before budget approval must be checked for any early-stage use.
 
-The category selection, region encoding, and year scaling are
-based on training data only to avoid data leakage.
-
-The target value is the project's actual budget in PHP.
+The target is the project's recorded budget in PHP. The original 25-feature representation consists of the first three groups.
 
 ## How to Use
 
@@ -35,7 +36,11 @@ Import the shared preprocessing function:
 ```python
 from src.preprocessing import prepare_data
 
-X_train, y_train, X_test, y_test = prepare_data()
+X_train, y_train, X_test, y_test = prepare_data(
+    include_description=True,
+    include_location=True,
+    include_funding=True,
+)
 ```
 
 - X_train: training input features
@@ -44,7 +49,7 @@ X_train, y_train, X_test, y_test = prepare_data()
 - y_test: actual testing budgets
 
 All three algorithms should use these same datasets for a
-consistent comparison.
+consistent comparison. Calling `prepare_data()` with its defaults returns the original 25-feature representation. The final evaluation does not enable validation mode.
 
 ## Dataset File
 
