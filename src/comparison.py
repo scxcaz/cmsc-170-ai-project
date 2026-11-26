@@ -112,8 +112,12 @@ def create_graphs(results, output_dir):
 
 
 def main():
-    # loads the shared dataset and converts it into NumPy arrays
-    X_train, y_train, X_test, y_test = prepare_data()
+    # prepares all 152 features using the original training and testing split
+    X_train, y_train, X_test, y_test = prepare_data(
+        include_description=True,
+        include_location=True,
+        include_funding=True
+    )
 
     X_train = np.asarray(X_train, dtype=float)
     X_test = np.asarray(X_test, dtype=float)
@@ -160,17 +164,18 @@ def main():
         y_test, tree_predictions
     )
 
-    # trains random forest using the verified hyperparameters
+    # trains random forest using the selected hyperparameters
     print("\nTraining Random Forest...")
     print("Trees: 5 | Depth: 8 | Min split: 20 | Min leaf: 10")
-    print("Features per split: 5 | Random state: 42")
+    print("Features per split: 30 | Random state: 42")
 
+    # uses 30 randomly selected features when searching for each split
     random_forest = RandomForestRegressor(
         n_trees=5,
         max_depth=8,
         min_samples_split=20,
         min_samples_leaf=10,
-        max_features=5,
+        max_features=30,
         random_state=42,
     )
 
